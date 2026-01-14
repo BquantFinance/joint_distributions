@@ -180,7 +180,8 @@ def download_data(tickers: list, start_date: str, end_date: str) -> pd.DataFrame
             start=start_date,
             end=end_date,
             auto_adjust=True,
-            progress=False
+            progress=False,
+            multi_level_index=False
         )['Close']
         
         # Handle single ticker case
