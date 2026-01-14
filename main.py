@@ -273,7 +273,7 @@ def create_plotly_3d_single(
         scene=dict(
             xaxis=dict(
                 title=f'{pair[0]} (%)',
-                titlefont=dict(color='#9ca3af', size=12),
+                title_font=dict(color='#9ca3af', size=12),
                 tickfont=dict(color='#6b7280', size=10),
                 gridcolor='rgba(75, 85, 99, 0.3)',
                 backgroundcolor='#0f1117',
@@ -282,7 +282,7 @@ def create_plotly_3d_single(
             ),
             yaxis=dict(
                 title=f'{pair[1]} (%)',
-                titlefont=dict(color='#9ca3af', size=12),
+                title_font=dict(color='#9ca3af', size=12),
                 tickfont=dict(color='#6b7280', size=10),
                 gridcolor='rgba(75, 85, 99, 0.3)',
                 backgroundcolor='#0f1117',
@@ -291,7 +291,7 @@ def create_plotly_3d_single(
             ),
             zaxis=dict(
                 title='Density',
-                titlefont=dict(color='#9ca3af', size=12),
+                title_font=dict(color='#9ca3af', size=12),
                 tickfont=dict(color='#6b7280', size=10),
                 gridcolor='rgba(75, 85, 99, 0.3)',
                 backgroundcolor='#0f1117',
@@ -421,7 +421,7 @@ def create_plotly_3d_grid(
             scene_name: dict(
                 xaxis=dict(
                     title=f'{pair[0]} (%)',
-                    titlefont=dict(color='#9ca3af', size=10),
+                    title_font=dict(color='#9ca3af', size=10),
                     tickfont=dict(color='#6b7280', size=8),
                     gridcolor='rgba(75, 85, 99, 0.3)',
                     backgroundcolor='#0f1117',
@@ -429,7 +429,7 @@ def create_plotly_3d_grid(
                 ),
                 yaxis=dict(
                     title=f'{pair[1]} (%)',
-                    titlefont=dict(color='#9ca3af', size=10),
+                    title_font=dict(color='#9ca3af', size=10),
                     tickfont=dict(color='#6b7280', size=8),
                     gridcolor='rgba(75, 85, 99, 0.3)',
                     backgroundcolor='#0f1117',
