@@ -409,10 +409,13 @@ def generate_gif(
     frames = []
     dates = returns.index
     
-    total_frames = (len(returns) - window_size) // step_size
+    # Calculate actual frame indices
+    frame_indices = list(range(window_size, len(returns), step_size))
+    total_frames = len(frame_indices)
+    
     progress_bar = st.progress(0, text="Generating animation...")
     
-    for i, window_end in enumerate(range(window_size, len(returns), step_size)):
+    for i, window_end in enumerate(frame_indices):
         date_str = dates[window_end].strftime('%Y-%m-%d')
         
         if len(pairs) == 1:
@@ -432,7 +435,7 @@ def generate_gif(
         frames.append(imageio.imread(buf))
         plt.close(fig)
         
-        progress_bar.progress((i + 1) / total_frames, text=f"Generating frame {i+1}/{total_frames}")
+        progress_bar.progress(min((i + 1) / total_frames, 1.0), text=f"Generating frame {i+1}/{total_frames}")
     
     progress_bar.empty()
     
