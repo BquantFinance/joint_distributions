@@ -200,61 +200,79 @@ def create_plotly_3d_single(
     except:
         density_norm = np.zeros_like(xx)
     
-    # Spectacular custom colorscale
+    # Spectacular custom colorscale - more vibrant
     colorscale = [
-        [0.0, '#0f1117'],
-        [0.15, '#1a1f2e'],
-        [0.3, '#1e3a5f'],
-        [0.45, '#2d6187'],
-        [0.6, '#4a9ebb'],
-        [0.75, '#7ecce8'],
-        [0.85, '#b8e0f0'],
-        [0.95, '#e8d5a3'],
-        [1.0, '#c9a962'],
+        [0.0, 'rgba(15, 17, 23, 0.0)'],
+        [0.05, 'rgba(20, 30, 50, 0.3)'],
+        [0.15, 'rgba(30, 58, 95, 0.6)'],
+        [0.3, 'rgba(45, 97, 135, 0.8)'],
+        [0.45, 'rgba(74, 158, 187, 0.9)'],
+        [0.6, 'rgba(126, 204, 232, 0.95)'],
+        [0.75, 'rgba(184, 224, 240, 0.98)'],
+        [0.88, 'rgba(232, 213, 163, 1.0)'],
+        [1.0, 'rgba(201, 169, 98, 1.0)'],
     ]
     
-    # Create 3D surface
+    # Create figure
     fig = go.Figure()
     
-    # Main surface
+    # Main surface - floating, no floor
     fig.add_trace(go.Surface(
         x=xx,
         y=yy,
         z=density_norm,
         colorscale=colorscale,
         showscale=False,
-        opacity=0.95,
+        opacity=0.97,
         lighting=dict(
-            ambient=0.4,
-            diffuse=0.6,
-            specular=0.3,
-            roughness=0.5,
-            fresnel=0.2
+            ambient=0.5,
+            diffuse=0.7,
+            specular=0.4,
+            roughness=0.3,
+            fresnel=0.3
         ),
-        lightposition=dict(x=100, y=100, z=100),
+        lightposition=dict(x=0, y=0, z=2),
         contours=dict(
+            x=dict(show=False),
+            y=dict(show=False),
             z=dict(
                 show=True,
                 usecolormap=True,
-                highlightcolor="#c9a962",
-                project_z=True
+                highlightcolor="#ffffff",
+                project_z=False,
+                width=2
             )
         ),
         hovertemplate=f'{pair[0]}: %{{x:.2f}}%<br>{pair[1]}: %{{y:.2f}}%<br>Density: %{{z:.3f}}<extra></extra>'
     ))
     
-    # Scatter points on the bottom
-    z_offset = -0.1
+    # Map scatter z-values to surface (points on the surface, not floating)
+    from scipy.interpolate import RegularGridInterpolator
+    try:
+        interp = RegularGridInterpolator(
+            (np.linspace(xmin, xmax, grid_size), np.linspace(ymin, ymax, grid_size)),
+            density_norm,
+            method='linear',
+            bounds_error=False,
+            fill_value=0
+        )
+        z_scatter = interp(np.column_stack([x, y]))
+        z_scatter = np.clip(z_scatter, 0, None) + 0.02  # Slightly above surface
+    except:
+        z_scatter = np.full_like(x, 0.05)
+    
+    # Glowing scatter points on surface
     fig.add_trace(go.Scatter3d(
         x=x,
         y=y,
-        z=np.full_like(x, z_offset),
+        z=z_scatter,
         mode='markers',
         marker=dict(
-            size=3,
+            size=4,
             color='#c9a962',
-            opacity=0.7,
-            symbol='circle'
+            opacity=0.9,
+            symbol='circle',
+            line=dict(color='#ffffff', width=0.5)
         ),
         hovertemplate=f'{pair[0]}: %{{x:.2f}}%<br>{pair[1]}: %{{y:.2f}}%<extra></extra>',
         name='Returns'
@@ -263,7 +281,7 @@ def create_plotly_3d_single(
     # Correlation color
     corr_color = '#ef4444' if corr > 0.5 else '#22c55e' if corr < -0.2 else '#c9a962'
     
-    # Layout
+    # Layout - clean, no background panes
     fig.update_layout(
         title=dict(
             text=f'<b>{pair[0]} vs {pair[1]}</b>  ·  {date_str}  ·  <span style="color:{corr_color}">ρ = {corr:.2f}</span>',
@@ -275,37 +293,42 @@ def create_plotly_3d_single(
                 title=f'{pair[0]} (%)',
                 title_font=dict(color='#9ca3af', size=12),
                 tickfont=dict(color='#6b7280', size=10),
-                gridcolor='rgba(75, 85, 99, 0.3)',
-                backgroundcolor='#0f1117',
-                showbackground=True,
-                zerolinecolor='#2a2f3a'
+                gridcolor='rgba(75, 85, 99, 0.15)',
+                showbackground=False,
+                showgrid=True,
+                zeroline=False,
+                showline=False,
+                showspikes=False
             ),
             yaxis=dict(
                 title=f'{pair[1]} (%)',
                 title_font=dict(color='#9ca3af', size=12),
                 tickfont=dict(color='#6b7280', size=10),
-                gridcolor='rgba(75, 85, 99, 0.3)',
-                backgroundcolor='#0f1117',
-                showbackground=True,
-                zerolinecolor='#2a2f3a'
+                gridcolor='rgba(75, 85, 99, 0.15)',
+                showbackground=False,
+                showgrid=True,
+                zeroline=False,
+                showline=False,
+                showspikes=False
             ),
             zaxis=dict(
-                title='Density',
-                title_font=dict(color='#9ca3af', size=12),
-                tickfont=dict(color='#6b7280', size=10),
-                gridcolor='rgba(75, 85, 99, 0.3)',
-                backgroundcolor='#0f1117',
-                showbackground=True,
-                showticklabels=False
+                title='',
+                showticklabels=False,
+                showgrid=False,
+                showbackground=False,
+                zeroline=False,
+                showline=False,
+                showspikes=False
             ),
             camera=dict(
-                eye=dict(x=1.5, y=1.5, z=1.0)
+                eye=dict(x=1.6, y=1.6, z=0.9)
             ),
             aspectmode='manual',
-            aspectratio=dict(x=1, y=1, z=0.6)
+            aspectratio=dict(x=1, y=1, z=0.5),
+            bgcolor='rgba(0,0,0,0)'
         ),
         paper_bgcolor='#0f1117',
-        plot_bgcolor='#0f1117',
+        plot_bgcolor='rgba(0,0,0,0)',
         margin=dict(l=0, r=0, t=50, b=0),
         showlegend=False,
         height=550
@@ -337,21 +360,21 @@ def create_plotly_3d_grid(
         rows=rows, cols=cols,
         specs=specs,
         subplot_titles=[f'{p[0]} vs {p[1]}' for p in pairs],
-        horizontal_spacing=0.05,
-        vertical_spacing=0.1
+        horizontal_spacing=0.02,
+        vertical_spacing=0.08
     )
     
-    # Spectacular colorscale
+    # Spectacular colorscale with transparency at base
     colorscale = [
-        [0.0, '#0f1117'],
-        [0.15, '#1a1f2e'],
-        [0.3, '#1e3a5f'],
-        [0.45, '#2d6187'],
-        [0.6, '#4a9ebb'],
-        [0.75, '#7ecce8'],
-        [0.85, '#b8e0f0'],
-        [0.95, '#e8d5a3'],
-        [1.0, '#c9a962'],
+        [0.0, 'rgba(15, 17, 23, 0.0)'],
+        [0.05, 'rgba(20, 30, 50, 0.3)'],
+        [0.15, 'rgba(30, 58, 95, 0.6)'],
+        [0.3, 'rgba(45, 97, 135, 0.8)'],
+        [0.45, 'rgba(74, 158, 187, 0.9)'],
+        [0.6, 'rgba(126, 204, 232, 0.95)'],
+        [0.75, 'rgba(184, 224, 240, 0.98)'],
+        [0.88, 'rgba(232, 213, 163, 1.0)'],
+        [1.0, 'rgba(201, 169, 98, 1.0)'],
     ]
     
     window_data = returns.iloc[-window_size:]
@@ -384,10 +407,12 @@ def create_plotly_3d_grid(
             density = gaussian_filter(density, sigma=1.0)
             density_norm = (density - density.min()) / (density.max() - density.min())
         except:
-            xx, yy = np.mgrid[-3:3:50j, -3:3:50j]
+            grid_size = 50
+            xx, yy = np.mgrid[-3:3:complex(grid_size), -3:3:complex(grid_size)]
             density_norm = np.zeros_like(xx)
+            xmin, xmax, ymin, ymax = -3, 3, -3, 3
         
-        # Add surface
+        # Add surface - floating, no floor
         fig.add_trace(
             go.Surface(
                 x=xx,
@@ -395,27 +420,57 @@ def create_plotly_3d_grid(
                 z=density_norm,
                 colorscale=colorscale,
                 showscale=False,
-                opacity=0.95,
-                lighting=dict(ambient=0.4, diffuse=0.6, specular=0.3),
+                opacity=0.97,
+                lighting=dict(
+                    ambient=0.5,
+                    diffuse=0.7,
+                    specular=0.4,
+                    roughness=0.3,
+                    fresnel=0.3
+                ),
+                lightposition=dict(x=0, y=0, z=2),
+                contours=dict(
+                    z=dict(show=True, usecolormap=True, project_z=False, width=1)
+                ),
                 hovertemplate=f'{pair[0]}: %{{x:.2f}}%<br>{pair[1]}: %{{y:.2f}}%<extra>ρ={corr:.2f}</extra>'
             ),
             row=row, col=col
         )
         
-        # Add scatter points
+        # Map scatter to surface
+        try:
+            from scipy.interpolate import RegularGridInterpolator
+            interp = RegularGridInterpolator(
+                (np.linspace(xmin, xmax, grid_size), np.linspace(ymin, ymax, grid_size)),
+                density_norm,
+                method='linear',
+                bounds_error=False,
+                fill_value=0
+            )
+            z_scatter = interp(np.column_stack([x, y]))
+            z_scatter = np.clip(z_scatter, 0, None) + 0.02
+        except:
+            z_scatter = np.full_like(x, 0.05)
+        
+        # Add scatter points on surface
         fig.add_trace(
             go.Scatter3d(
                 x=x,
                 y=y,
-                z=np.full_like(x, -0.1),
+                z=z_scatter,
                 mode='markers',
-                marker=dict(size=2, color='#c9a962', opacity=0.6),
+                marker=dict(
+                    size=3,
+                    color='#c9a962',
+                    opacity=0.85,
+                    line=dict(color='#ffffff', width=0.3)
+                ),
                 hoverinfo='skip'
             ),
             row=row, col=col
         )
         
-        # Update scene for this subplot
+        # Update scene for this subplot - clean, no background
         scene_name = f'scene{idx + 1}' if idx > 0 else 'scene'
         fig.update_layout(**{
             scene_name: dict(
@@ -423,28 +478,34 @@ def create_plotly_3d_grid(
                     title=f'{pair[0]} (%)',
                     title_font=dict(color='#9ca3af', size=10),
                     tickfont=dict(color='#6b7280', size=8),
-                    gridcolor='rgba(75, 85, 99, 0.3)',
-                    backgroundcolor='#0f1117',
-                    showbackground=True
+                    gridcolor='rgba(75, 85, 99, 0.12)',
+                    showbackground=False,
+                    showgrid=True,
+                    zeroline=False,
+                    showspikes=False
                 ),
                 yaxis=dict(
                     title=f'{pair[1]} (%)',
                     title_font=dict(color='#9ca3af', size=10),
                     tickfont=dict(color='#6b7280', size=8),
-                    gridcolor='rgba(75, 85, 99, 0.3)',
-                    backgroundcolor='#0f1117',
-                    showbackground=True
+                    gridcolor='rgba(75, 85, 99, 0.12)',
+                    showbackground=False,
+                    showgrid=True,
+                    zeroline=False,
+                    showspikes=False
                 ),
                 zaxis=dict(
                     title='',
                     showticklabels=False,
-                    gridcolor='rgba(75, 85, 99, 0.3)',
-                    backgroundcolor='#0f1117',
-                    showbackground=True
+                    showgrid=False,
+                    showbackground=False,
+                    zeroline=False,
+                    showspikes=False
                 ),
-                camera=dict(eye=dict(x=1.5, y=1.5, z=0.9)),
+                camera=dict(eye=dict(x=1.5, y=1.5, z=0.8)),
                 aspectmode='manual',
-                aspectratio=dict(x=1, y=1, z=0.5)
+                aspectratio=dict(x=1, y=1, z=0.45),
+                bgcolor='rgba(0,0,0,0)'
             )
         })
     
@@ -456,16 +517,16 @@ def create_plotly_3d_grid(
             font=dict(size=18, color='#f0f2f6')
         ),
         paper_bgcolor='#0f1117',
-        plot_bgcolor='#0f1117',
+        plot_bgcolor='rgba(0,0,0,0)',
         margin=dict(l=0, r=0, t=80, b=0),
         showlegend=False,
-        height=500 if n_pairs <= 3 else 800
+        height=480 if n_pairs <= 3 else 750
     )
     
     # Update subplot title colors
     for annotation in fig.layout.annotations:
         annotation.font.color = '#f0f2f6'
-        annotation.font.size = 12
+        annotation.font.size = 13
     
     return fig
 
@@ -538,94 +599,102 @@ def create_joint_density_frame(
         ymax += y_range * 0.3
         
         # Higher resolution grid for smooth surface
-        xx, yy = np.mgrid[xmin:xmax:120j, ymin:ymax:120j]
+        grid_res = 100
+        xx, yy = np.mgrid[xmin:xmax:complex(grid_res), ymin:ymax:complex(grid_res)]
         positions = np.vstack([xx.ravel(), yy.ravel()])
         
         kernel = stats.gaussian_kde(np.vstack([x, y]))
         density = np.reshape(kernel(positions).T, xx.shape)
+        density = gaussian_filter(density, sigma=1.2)
         
         # Normalize density for better visualization
         density_norm = (density - density.min()) / (density.max() - density.min())
         
-        # Custom colormap - dark blue to cyan to gold
-        from matplotlib.colors import LinearSegmentedColormap
+        # Custom colormap - transparent at base, vibrant at peak
         colors_3d = [
-            '#0f1117',  # Dark base
-            '#1a1f2e',  # Dark blue
-            '#1e3a5f',  # Navy
-            '#2d6187',  # Steel blue
-            '#4a9ebb',  # Cyan
-            '#7ecce8',  # Light cyan
-            '#b8e0f0',  # Pale cyan
-            '#e8d5a3',  # Warm highlight
-            '#c9a962',  # Gold peak
+            (0.06, 0.07, 0.09, 0.0),    # Transparent dark base
+            (0.08, 0.12, 0.20, 0.3),    # Dark blue low alpha
+            (0.12, 0.23, 0.37, 0.6),    # Navy
+            (0.18, 0.38, 0.53, 0.8),    # Steel blue
+            (0.29, 0.62, 0.73, 0.9),    # Cyan
+            (0.49, 0.80, 0.91, 0.95),   # Light cyan
+            (0.72, 0.88, 0.94, 0.98),   # Pale cyan
+            (0.91, 0.84, 0.64, 1.0),    # Warm highlight
+            (0.79, 0.66, 0.38, 1.0),    # Gold peak
         ]
         cmap_3d = LinearSegmentedColormap.from_list('spectacular', colors_3d)
         
-        # Plot 3D surface
+        # Plot 3D surface - cleaner look
         surf = ax.plot_surface(
             xx, yy, density_norm,
             cmap=cmap_3d,
             edgecolor='none',
-            alpha=0.95,
+            alpha=0.97,
             antialiased=True,
             rstride=1,
             cstride=1,
             shade=True
         )
         
-        # Add contour projection on the bottom
-        offset = -0.15
-        ax.contourf(
-            xx, yy, density_norm,
-            zdir='z',
-            offset=offset,
-            cmap=cmap_3d,
-            alpha=0.4,
-            levels=15
-        )
-        
-        # Add subtle contour lines on surface
+        # Add contour lines on surface for depth
         ax.contour(
             xx, yy, density_norm,
             zdir='z',
-            offset=offset,
-            colors='#c9a962',
-            alpha=0.3,
-            linewidths=0.5,
+            offset=0,
+            colors='#ffffff',
+            alpha=0.15,
+            linewidths=0.3,
             levels=8
         )
         
-        # Scatter points projection on bottom
-        z_scatter = np.full_like(x, offset + 0.01)
-        ax.scatter(x, y, z_scatter, c='#c9a962', s=8, alpha=0.6, edgecolors='none')
+        # Scatter points on surface
+        from scipy.interpolate import RegularGridInterpolator
+        try:
+            interp = RegularGridInterpolator(
+                (np.linspace(xmin, xmax, grid_res), np.linspace(ymin, ymax, grid_res)),
+                density_norm,
+                method='linear',
+                bounds_error=False,
+                fill_value=0
+            )
+            z_scatter = interp(np.column_stack([x, y]))
+            z_scatter = np.clip(z_scatter, 0, None) + 0.02
+        except:
+            z_scatter = np.full_like(x, 0.05)
+        
+        ax.scatter(x, y, z_scatter, c='#c9a962', s=12, alpha=0.85, 
+                   edgecolors='white', linewidths=0.3, zorder=10)
         
     except Exception as e:
         # Fallback
         ax.scatter(x, y, np.zeros_like(x), c='#c9a962', s=15, alpha=0.7)
     
-    # Styling
+    # Styling - clean, no panes
     ax.set_xlabel(f'{pair[0]} (%)', fontsize=10, color='#9ca3af', labelpad=10)
     ax.set_ylabel(f'{pair[1]} (%)', fontsize=10, color='#9ca3af', labelpad=10)
-    ax.set_zlabel('Density', fontsize=10, color='#9ca3af', labelpad=10)
+    ax.set_zlabel('', fontsize=10, color='#9ca3af', labelpad=10)
     
-    # Set view angle - use passed azimuth for rotation effect
+    # Set view angle
     ax.view_init(elev=25, azim=azimuth)
     
-    # Style the panes
-    ax.xaxis.set_pane_color((0.06, 0.07, 0.09, 1.0))
-    ax.yaxis.set_pane_color((0.06, 0.07, 0.09, 1.0))
-    ax.zaxis.set_pane_color((0.06, 0.07, 0.09, 1.0))
+    # Make panes transparent
+    ax.xaxis.set_pane_color((0, 0, 0, 0))
+    ax.yaxis.set_pane_color((0, 0, 0, 0))
+    ax.zaxis.set_pane_color((0, 0, 0, 0))
     
-    # Style the grid
-    ax.xaxis._axinfo['grid']['color'] = (0.3, 0.35, 0.4, 0.3)
-    ax.yaxis._axinfo['grid']['color'] = (0.3, 0.35, 0.4, 0.3)
-    ax.zaxis._axinfo['grid']['color'] = (0.3, 0.35, 0.4, 0.3)
+    # Subtle grid
+    ax.xaxis._axinfo['grid']['color'] = (0.3, 0.35, 0.4, 0.15)
+    ax.yaxis._axinfo['grid']['color'] = (0.3, 0.35, 0.4, 0.15)
+    ax.zaxis._axinfo['grid']['color'] = (0, 0, 0, 0)
     
     # Tick colors
     ax.tick_params(axis='x', colors='#6b7280', labelsize=8)
     ax.tick_params(axis='y', colors='#6b7280', labelsize=8)
     ax.tick_params(axis='z', colors='#6b7280', labelsize=8)
+    
+    # Hide z-axis completely
+    ax.set_zticks([])
+    ax.zaxis.line.set_color((0, 0, 0, 0))
     
     # Title
     corr_color = '#ef4444' if corr > 0.5 else '#22c55e' if corr < -0.2 else '#c9a962'
@@ -636,9 +705,6 @@ def create_joint_density_frame(
         fontweight='600',
         y=0.95
     )
-    
-    # Remove z-axis ticks for cleaner look
-    ax.set_zticks([])
     
     plt.tight_layout()
     return fig
@@ -671,18 +737,17 @@ def create_grid_frame(
     window_start = max(0, window_end - window_size)
     window_data = returns.iloc[window_start:window_end]
     
-    # Custom colormap
-    from matplotlib.colors import LinearSegmentedColormap
+    # Custom colormap with transparency
     colors_3d = [
-        '#0f1117',
-        '#1a1f2e',
-        '#1e3a5f',
-        '#2d6187',
-        '#4a9ebb',
-        '#7ecce8',
-        '#b8e0f0',
-        '#e8d5a3',
-        '#c9a962',
+        (0.06, 0.07, 0.09, 0.0),
+        (0.08, 0.12, 0.20, 0.3),
+        (0.12, 0.23, 0.37, 0.6),
+        (0.18, 0.38, 0.53, 0.8),
+        (0.29, 0.62, 0.73, 0.9),
+        (0.49, 0.80, 0.91, 0.95),
+        (0.72, 0.88, 0.94, 0.98),
+        (0.91, 0.84, 0.64, 1.0),
+        (0.79, 0.66, 0.38, 1.0),
     ]
     cmap_3d = LinearSegmentedColormap.from_list('spectacular', colors_3d)
     
@@ -706,11 +771,13 @@ def create_grid_frame(
             ymax += y_range * 0.3
             
             # Grid for surface
-            xx, yy = np.mgrid[xmin:xmax:80j, ymin:ymax:80j]
+            grid_res = 80
+            xx, yy = np.mgrid[xmin:xmax:complex(grid_res), ymin:ymax:complex(grid_res)]
             positions = np.vstack([xx.ravel(), yy.ravel()])
             
             kernel = stats.gaussian_kde(np.vstack([x, y]))
             density = np.reshape(kernel(positions).T, xx.shape)
+            density = gaussian_filter(density, sigma=1.0)
             
             # Normalize
             density_norm = (density - density.min()) / (density.max() - density.min())
@@ -720,50 +787,65 @@ def create_grid_frame(
                 xx, yy, density_norm,
                 cmap=cmap_3d,
                 edgecolor='none',
-                alpha=0.95,
+                alpha=0.97,
                 antialiased=True,
                 rstride=2,
                 cstride=2,
                 shade=True
             )
             
-            # Contour projection on bottom
-            offset = -0.15
-            ax.contourf(
+            # Subtle contour lines
+            ax.contour(
                 xx, yy, density_norm,
                 zdir='z',
-                offset=offset,
-                cmap=cmap_3d,
-                alpha=0.35,
-                levels=12
+                offset=0,
+                colors='#ffffff',
+                alpha=0.12,
+                linewidths=0.3,
+                levels=6
             )
             
-            # Scatter points
-            z_scatter = np.full_like(x, offset + 0.01)
-            ax.scatter(x, y, z_scatter, c='#c9a962', s=6, alpha=0.5, edgecolors='none')
+            # Scatter points on surface
+            from scipy.interpolate import RegularGridInterpolator
+            try:
+                interp = RegularGridInterpolator(
+                    (np.linspace(xmin, xmax, grid_res), np.linspace(ymin, ymax, grid_res)),
+                    density_norm,
+                    method='linear',
+                    bounds_error=False,
+                    fill_value=0
+                )
+                z_scatter = interp(np.column_stack([x, y]))
+                z_scatter = np.clip(z_scatter, 0, None) + 0.02
+            except:
+                z_scatter = np.full_like(x, 0.05)
+            
+            ax.scatter(x, y, z_scatter, c='#c9a962', s=8, alpha=0.8, 
+                       edgecolors='white', linewidths=0.2, zorder=10)
             
         except Exception:
             ax.scatter(x, y, np.zeros_like(x), c='#c9a962', s=10, alpha=0.6)
         
-        # Styling
+        # Styling - clean, no panes
         ax.set_xlabel(f'{pair[0]} (%)', fontsize=9, color='#9ca3af', labelpad=8)
         ax.set_ylabel(f'{pair[1]} (%)', fontsize=9, color='#9ca3af', labelpad=8)
         
         ax.view_init(elev=25, azim=azimuth)
         
-        # Pane colors
-        ax.xaxis.set_pane_color((0.06, 0.07, 0.09, 1.0))
-        ax.yaxis.set_pane_color((0.06, 0.07, 0.09, 1.0))
-        ax.zaxis.set_pane_color((0.06, 0.07, 0.09, 1.0))
+        # Transparent panes
+        ax.xaxis.set_pane_color((0, 0, 0, 0))
+        ax.yaxis.set_pane_color((0, 0, 0, 0))
+        ax.zaxis.set_pane_color((0, 0, 0, 0))
         
-        # Grid colors
-        ax.xaxis._axinfo['grid']['color'] = (0.3, 0.35, 0.4, 0.25)
-        ax.yaxis._axinfo['grid']['color'] = (0.3, 0.35, 0.4, 0.25)
-        ax.zaxis._axinfo['grid']['color'] = (0.3, 0.35, 0.4, 0.25)
+        # Subtle grid
+        ax.xaxis._axinfo['grid']['color'] = (0.3, 0.35, 0.4, 0.12)
+        ax.yaxis._axinfo['grid']['color'] = (0.3, 0.35, 0.4, 0.12)
+        ax.zaxis._axinfo['grid']['color'] = (0, 0, 0, 0)
         
         ax.tick_params(axis='x', colors='#6b7280', labelsize=7)
         ax.tick_params(axis='y', colors='#6b7280', labelsize=7)
         ax.set_zticks([])
+        ax.zaxis.line.set_color((0, 0, 0, 0))
         
         # Title per subplot
         corr_color = '#ef4444' if corr > 0.5 else '#22c55e' if corr < -0.2 else '#c9a962'
