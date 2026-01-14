@@ -29,96 +29,92 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for dark aesthetic
+# Custom CSS for professional dark aesthetic
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     
     .stApp {
-        background-color: #0a0a0a;
+        background-color: #0f1117;
         font-family: 'Inter', sans-serif;
     }
     
     .main-header {
         text-align: center;
         padding: 1.5rem 0;
-        border-bottom: 1px solid #1a1a2e;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
         margin-bottom: 2rem;
     }
     
     .main-title {
         font-size: 2.2rem;
         font-weight: 700;
-        color: #ffffff;
+        color: #f0f2f6;
         margin-bottom: 0.3rem;
         letter-spacing: -0.02em;
     }
     
     .main-subtitle {
         font-size: 1rem;
-        color: #6c757d;
+        color: #9ca3af;
         font-weight: 400;
     }
     
     .brand-link {
-        color: #4a9eff;
+        color: #c9a962;
         text-decoration: none;
         font-weight: 500;
     }
     
     .brand-link:hover {
-        color: #7ab8ff;
+        color: #e0c478;
     }
     
     .metric-card {
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        background: rgba(255,255,255,0.03);
         border-radius: 12px;
         padding: 1.2rem;
-        border: 1px solid #2a2a4a;
+        border: 1px solid rgba(255,255,255,0.06);
         margin-bottom: 1rem;
     }
     
     .metric-label {
-        font-size: 0.75rem;
-        color: #8892a0;
+        font-size: 0.7rem;
+        color: #6b7280;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.08em;
         margin-bottom: 0.3rem;
     }
     
     .metric-value {
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         font-weight: 600;
-        color: #ffffff;
+        color: #f0f2f6;
     }
     
     .info-box {
-        background: #1a1a2e;
-        border-left: 3px solid #4a9eff;
+        background: rgba(255,255,255,0.02);
+        border-left: 2px solid #c9a962;
         padding: 1rem;
-        border-radius: 0 8px 8px 0;
+        border-radius: 0 6px 6px 0;
         margin: 1rem 0;
-        font-size: 0.9rem;
-        color: #b0b0b0;
+        font-size: 0.85rem;
+        color: #9ca3af;
     }
     
     .stSelectbox > div > div {
-        background-color: #1a1a2e;
-        border-color: #2a2a4a;
-    }
-    
-    .stSlider > div > div {
-        background-color: #4a9eff;
+        background-color: rgba(255,255,255,0.03);
+        border-color: rgba(255,255,255,0.08);
     }
     
     section[data-testid="stSidebar"] {
-        background-color: #0d0d14;
-        border-right: 1px solid #1a1a2e;
+        background-color: #0a0c10;
+        border-right: 1px solid rgba(255,255,255,0.06);
     }
     
     .sidebar-header {
-        font-size: 0.8rem;
-        color: #6c757d;
+        font-size: 0.7rem;
+        color: #6b7280;
         text-transform: uppercase;
         letter-spacing: 0.1em;
         margin-bottom: 0.5rem;
@@ -128,29 +124,25 @@ st.markdown("""
     footer {
         text-align: center;
         padding: 2rem 0;
-        color: #4a4a6a;
+        color: #4b5563;
         font-size: 0.85rem;
-        border-top: 1px solid #1a1a2e;
+        border-top: 1px solid rgba(255,255,255,0.06);
         margin-top: 2rem;
     }
     
     .stButton > button {
-        background: linear-gradient(135deg, #4a9eff 0%, #2d7dd2 100%);
-        color: white;
+        background: #c9a962;
+        color: #0f1117;
         border: none;
         padding: 0.6rem 1.5rem;
-        border-radius: 8px;
-        font-weight: 500;
-        transition: all 0.3s ease;
+        border-radius: 6px;
+        font-weight: 600;
+        transition: all 0.2s ease;
     }
     
     .stButton > button:hover {
-        background: linear-gradient(135deg, #5aa8ff 0%, #3d8de2 100%);
-        box-shadow: 0 4px 15px rgba(74, 158, 255, 0.3);
-    }
-    
-    .download-btn {
-        background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%) !important;
+        background: #d4b872;
+        box-shadow: 0 4px 12px rgba(201, 169, 98, 0.25);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -162,7 +154,7 @@ st.markdown("""
 <div class="main-header">
     <div class="main-title">Joint Distribution Evolution</div>
     <div class="main-subtitle">
-        <a href="https://twitter.com/Gsnchez" class="brand-link" target="_blank">@Gsnchez</a> | 
+        <a href="https://twitter.com/Gsnchez" class="brand-link" target="_blank">@Gsnchez</a> · 
         <a href="https://bquantfinance.com" class="brand-link" target="_blank">bquantfinance.com</a>
     </div>
 </div>
@@ -187,10 +179,6 @@ def download_data(tickers: list, start_date: str, end_date: str) -> pd.DataFrame
         # Handle single ticker case
         if isinstance(data, pd.Series):
             data = data.to_frame(name=tickers[0])
-        
-        # Ensure column names are simple strings
-        if hasattr(data.columns, 'get_level_values'):
-            data.columns = data.columns.get_level_values(0)
         
         return data.dropna()
     except Exception as e:
@@ -220,8 +208,8 @@ def create_joint_density_frame(
     y = window_data[pair[1]].values * 100
     
     # Create figure with dark background
-    fig, ax = plt.subplots(figsize=figsize, facecolor='#0a0a0a')
-    ax.set_facecolor('#0a0a0a')
+    fig, ax = plt.subplots(figsize=figsize, facecolor='#0f1117')
+    ax.set_facecolor('#0f1117')
     
     # Compute correlation
     corr = np.corrcoef(x, y)[0, 1]
@@ -246,43 +234,51 @@ def create_joint_density_frame(
         kernel = stats.gaussian_kde(np.vstack([x, y]))
         density = np.reshape(kernel(positions).T, xx.shape)
         
+        # Professional colormap - custom grayscale with subtle warmth
+        from matplotlib.colors import LinearSegmentedColormap
+        colors_density = ['#0f1117', '#1a1d26', '#252a36', '#3d4455', '#5a6275', '#7d8597', '#a3aab8', '#c9cdd6']
+        cmap_pro = LinearSegmentedColormap.from_list('professional', colors_density)
+        
         # Contour plot
         levels = np.linspace(density.min(), density.max(), 15)
-        contour = ax.contourf(xx, yy, density, levels=levels, cmap='Blues', alpha=0.8)
-        ax.contour(xx, yy, density, levels=levels[::2], colors='white', alpha=0.3, linewidths=0.5)
+        contour = ax.contourf(xx, yy, density, levels=levels, cmap=cmap_pro, alpha=0.95)
+        ax.contour(xx, yy, density, levels=levels[::2], colors='#c9a962', alpha=0.25, linewidths=0.5)
         
     except Exception:
         # Fallback to scatter if KDE fails
-        ax.scatter(x, y, alpha=0.5, s=10, c='#4a9eff', edgecolors='none')
+        ax.scatter(x, y, alpha=0.5, s=10, c='#c9a962', edgecolors='none')
     
     # Scatter points on top
-    ax.scatter(x, y, alpha=0.4, s=8, c='white', edgecolors='none', zorder=5)
+    ax.scatter(x, y, alpha=0.5, s=8, c='#c9a962', edgecolors='none', zorder=5)
     
     # Style axes
-    ax.set_xlabel(f'{pair[0]} Returns (%)', fontsize=10, color='#b0b0b0', fontweight='500')
-    ax.set_ylabel(f'{pair[1]} Returns (%)', fontsize=10, color='#b0b0b0', fontweight='500')
+    ax.set_xlabel(f'{pair[0]} Returns (%)', fontsize=10, color='#9ca3af', fontweight='500')
+    ax.set_ylabel(f'{pair[1]} Returns (%)', fontsize=10, color='#9ca3af', fontweight='500')
     
-    ax.tick_params(colors='#6c757d', labelsize=8)
+    ax.tick_params(colors='#6b7280', labelsize=8)
     for spine in ax.spines.values():
-        spine.set_color('#2a2a4a')
+        spine.set_color('#2a2f3a')
         spine.set_linewidth(0.5)
     
-    ax.axhline(0, color='#3a3a5a', linewidth=0.5, linestyle='--', alpha=0.5)
-    ax.axvline(0, color='#3a3a5a', linewidth=0.5, linestyle='--', alpha=0.5)
+    ax.axhline(0, color='#2a2f3a', linewidth=0.5, linestyle='-', alpha=0.6)
+    ax.axvline(0, color='#2a2f3a', linewidth=0.5, linestyle='-', alpha=0.6)
+    
+    # Grid
+    ax.grid(True, alpha=0.1, color='#4b5563', linewidth=0.5)
     
     # Title with date and correlation
-    corr_color = '#ff6b6b' if corr > 0.5 else '#4ecdc4' if corr < -0.2 else '#f9ca24'
+    corr_color = '#ef4444' if corr > 0.5 else '#22c55e' if corr < -0.2 else '#c9a962'
     ax.set_title(
-        f'{date_str}  |  ρ = {corr:.2f}',
+        f'{date_str}  ·  ρ = {corr:.2f}',
         fontsize=11,
-        color='white',
+        color='#f0f2f6',
         fontweight='600',
-        pad=10
+        pad=12
     )
     
     # Add correlation color indicator
     ax.add_patch(plt.Rectangle(
-        (0.02, 0.92), 0.04, 0.04,
+        (0.02, 0.92), 0.03, 0.03,
         transform=ax.transAxes,
         facecolor=corr_color,
         edgecolor='none',
@@ -314,7 +310,7 @@ def create_grid_frame(
         ncols, nrows = 3, 2
         figsize = (14, 10)
     
-    fig, axes = plt.subplots(nrows, ncols, figsize=figsize, facecolor='#0a0a0a')
+    fig, axes = plt.subplots(nrows, ncols, figsize=figsize, facecolor='#0f1117')
     
     if n_pairs == 1:
         axes = [axes]
@@ -324,8 +320,13 @@ def create_grid_frame(
     window_start = max(0, window_end - window_size)
     window_data = returns.iloc[window_start:window_end]
     
+    # Professional colormap
+    from matplotlib.colors import LinearSegmentedColormap
+    colors_density = ['#0f1117', '#1a1d26', '#252a36', '#3d4455', '#5a6275', '#7d8597', '#a3aab8', '#c9cdd6']
+    cmap_pro = LinearSegmentedColormap.from_list('professional', colors_density)
+    
     for idx, (pair, ax) in enumerate(zip(pairs, axes)):
-        ax.set_facecolor('#0a0a0a')
+        ax.set_facecolor('#0f1117')
         
         x = window_data[pair[0]].values * 100
         y = window_data[pair[1]].values * 100
@@ -350,32 +351,33 @@ def create_grid_frame(
             density = np.reshape(kernel(positions).T, xx.shape)
             
             levels = np.linspace(density.min(), density.max(), 12)
-            ax.contourf(xx, yy, density, levels=levels, cmap='Blues', alpha=0.8)
-            ax.contour(xx, yy, density, levels=levels[::2], colors='white', alpha=0.3, linewidths=0.5)
+            ax.contourf(xx, yy, density, levels=levels, cmap=cmap_pro, alpha=0.95)
+            ax.contour(xx, yy, density, levels=levels[::2], colors='#c9a962', alpha=0.25, linewidths=0.5)
             
         except Exception:
-            ax.scatter(x, y, alpha=0.5, s=8, c='#4a9eff', edgecolors='none')
+            ax.scatter(x, y, alpha=0.5, s=8, c='#c9a962', edgecolors='none')
         
-        ax.scatter(x, y, alpha=0.3, s=5, c='white', edgecolors='none', zorder=5)
+        ax.scatter(x, y, alpha=0.5, s=5, c='#c9a962', edgecolors='none', zorder=5)
         
-        ax.set_xlabel(f'{pair[0]} (%)', fontsize=9, color='#b0b0b0')
-        ax.set_ylabel(f'{pair[1]} (%)', fontsize=9, color='#b0b0b0')
-        ax.tick_params(colors='#6c757d', labelsize=7)
+        ax.set_xlabel(f'{pair[0]} (%)', fontsize=9, color='#9ca3af')
+        ax.set_ylabel(f'{pair[1]} (%)', fontsize=9, color='#9ca3af')
+        ax.tick_params(colors='#6b7280', labelsize=7)
         
         for spine in ax.spines.values():
-            spine.set_color('#2a2a4a')
+            spine.set_color('#2a2f3a')
             spine.set_linewidth(0.5)
         
-        ax.axhline(0, color='#3a3a5a', linewidth=0.5, linestyle='--', alpha=0.5)
-        ax.axvline(0, color='#3a3a5a', linewidth=0.5, linestyle='--', alpha=0.5)
+        ax.axhline(0, color='#2a2f3a', linewidth=0.5, linestyle='-', alpha=0.6)
+        ax.axvline(0, color='#2a2f3a', linewidth=0.5, linestyle='-', alpha=0.6)
+        ax.grid(True, alpha=0.08, color='#4b5563', linewidth=0.5)
         
-        corr_color = '#ff6b6b' if corr > 0.5 else '#4ecdc4' if corr < -0.2 else '#f9ca24'
+        corr_color = '#ef4444' if corr > 0.5 else '#22c55e' if corr < -0.2 else '#c9a962'
         ax.set_title(
-            f'{pair[0]} vs {pair[1]}  |  ρ = {corr:.2f}',
+            f'{pair[0]} vs {pair[1]}  ·  ρ = {corr:.2f}',
             fontsize=10,
-            color='white',
+            color='#f0f2f6',
             fontweight='500',
-            pad=8
+            pad=10
         )
     
     # Hide unused axes
@@ -385,8 +387,8 @@ def create_grid_frame(
     # Main title
     fig.suptitle(
         f'{date_str}',
-        fontsize=14,
-        color='white',
+        fontsize=13,
+        color='#f0f2f6',
         fontweight='600',
         y=0.98
     )
@@ -424,7 +426,7 @@ def generate_gif(
         
         # Convert figure to image
         buf = io.BytesIO()
-        fig.savefig(buf, format='png', dpi=100, facecolor='#0a0a0a', 
+        fig.savefig(buf, format='png', dpi=100, facecolor='#0f1117', 
                     edgecolor='none', bbox_inches='tight')
         buf.seek(0)
         frames.append(imageio.imread(buf))
@@ -628,10 +630,10 @@ if st.session_state.gif_data is not None:
 st.markdown("---")
 st.markdown("""
 <footer>
-    <p>Built with 💙 by <a href="https://twitter.com/Gsnchez" class="brand-link" target="_blank">@Gsnchez</a> | 
-    <a href="https://bquantfinance.com" class="brand-link" target="_blank">BQuant Finance</a></p>
-    <p style="font-size: 0.75rem; margin-top: 0.5rem;">
-        Visualizing how asset relationships evolve through market regimes.
+    <p>Built by <a href="https://twitter.com/Gsnchez" class="brand-link" target="_blank">@Gsnchez</a> · 
+    <a href="https://bquantfinance.com" class="brand-link" target="_blank">bquantfinance.com</a></p>
+    <p style="font-size: 0.75rem; margin-top: 0.5rem; color: #6b7280;">
+        Visualizing how asset relationships evolve through market regimes
     </p>
 </footer>
 """, unsafe_allow_html=True)
