@@ -10,17 +10,10 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
-from matplotlib import cm
-from matplotlib.colors import LinearSegmentedColormap
-from mpl_toolkits.mplot3d import Axes3D
 from scipy import stats
 from scipy.ndimage import gaussian_filter
 from scipy.interpolate import RegularGridInterpolator
 from itertools import combinations
-import io
-import imageio
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -796,236 +789,207 @@ def create_conditional_distribution_plot(
     return fig
 
 
-# ============================================================================
-# MATPLOTLIB FUNCTIONS FOR GIF
-# ============================================================================
-def create_joint_density_frame(
+
+
+def generate_plotly_animation(
     returns: pd.DataFrame,
     pair: tuple,
-    window_end: int,
     window_size: int,
-    date_str: str,
-    figsize: tuple = (8, 7),
-    azimuth: float = -60
-) -> Figure:
-    """Create a spectacular 3D surface plot for GIF frames."""
+    step_size: int
+) -> go.Figure:
+    """Generate Plotly animated 3D surface."""
     
-    window_start = max(0, window_end - window_size)
-    window_data = returns.iloc[window_start:window_end]
+    dates = returns.index
+    frame_indices = list(range(window_size, len(returns), step_size))
     
-    x = window_data[pair[0]].values * 100
-    y = window_data[pair[1]].values * 100
-    corr = np.corrcoef(x, y)[0, 1]
-    tail_dep = compute_tail_dependence(x / 100, y / 100, u=0.05)
+    # Limit frames for performance
+    if len(frame_indices) > 100:
+        step_factor = len(frame_indices) // 100
+        frame_indices = frame_indices[::step_factor]
     
-    fig = plt.figure(figsize=figsize, facecolor='#0f1117')
-    ax = fig.add_subplot(111, projection='3d', facecolor='#0f1117')
-    
-    try:
-        xmin, xmax = np.percentile(x, [1, 99])
-        ymin, ymax = np.percentile(y, [1, 99])
-        xmin -= (xmax - xmin) * 0.3
-        xmax += (xmax - xmin) * 0.3
-        ymin -= (ymax - ymin) * 0.3
-        ymax += (ymax - ymin) * 0.3
-        
-        grid_res = 100
-        xx, yy = np.mgrid[xmin:xmax:complex(grid_res), ymin:ymax:complex(grid_res)]
-        positions = np.vstack([xx.ravel(), yy.ravel()])
-        
-        kernel = stats.gaussian_kde(np.vstack([x, y]))
-        density = np.reshape(kernel(positions).T, xx.shape)
-        density = gaussian_filter(density, sigma=1.2)
-        density_norm = (density - density.min()) / (density.max() - density.min())
-        
-        colors_3d = [
-            (0.06, 0.07, 0.09, 0.0), (0.08, 0.12, 0.20, 0.3),
-            (0.12, 0.23, 0.37, 0.6), (0.18, 0.38, 0.53, 0.8),
-            (0.29, 0.62, 0.73, 0.9), (0.49, 0.80, 0.91, 0.95),
-            (0.72, 0.88, 0.94, 0.98), (0.91, 0.84, 0.64, 1.0),
-            (0.79, 0.66, 0.38, 1.0),
-        ]
-        cmap_3d = LinearSegmentedColormap.from_list('spectacular', colors_3d)
-        
-        ax.plot_surface(xx, yy, density_norm, cmap=cmap_3d, edgecolor='none',
-                       alpha=0.97, antialiased=True, rstride=1, cstride=1, shade=True)
-        
-        ax.contour(xx, yy, density_norm, zdir='z', offset=0, colors='#ffffff',
-                  alpha=0.15, linewidths=0.3, levels=8)
-        
-        try:
-            interp = RegularGridInterpolator(
-                (np.linspace(xmin, xmax, grid_res), np.linspace(ymin, ymax, grid_res)),
-                density_norm, method='linear', bounds_error=False, fill_value=0
-            )
-            z_scatter = np.clip(interp(np.column_stack([x, y])), 0, None) + 0.02
-        except:
-            z_scatter = np.full_like(x, 0.05)
-        
-        ax.scatter(x, y, z_scatter, c='#c9a962', s=12, alpha=0.85,
-                  edgecolors='white', linewidths=0.3, zorder=10)
-        
-    except Exception:
-        ax.scatter(x, y, np.zeros_like(x), c='#c9a962', s=15, alpha=0.7)
-    
-    ax.set_xlabel(f'{pair[0]} (%)', fontsize=10, color='#9ca3af', labelpad=10)
-    ax.set_ylabel(f'{pair[1]} (%)', fontsize=10, color='#9ca3af', labelpad=10)
-    ax.view_init(elev=25, azim=azimuth)
-    
-    ax.xaxis.set_pane_color((0, 0, 0, 0))
-    ax.yaxis.set_pane_color((0, 0, 0, 0))
-    ax.zaxis.set_pane_color((0, 0, 0, 0))
-    ax.xaxis._axinfo['grid']['color'] = (0.3, 0.35, 0.4, 0.15)
-    ax.yaxis._axinfo['grid']['color'] = (0.3, 0.35, 0.4, 0.15)
-    ax.zaxis._axinfo['grid']['color'] = (0, 0, 0, 0)
-    ax.tick_params(axis='x', colors='#6b7280', labelsize=8)
-    ax.tick_params(axis='y', colors='#6b7280', labelsize=8)
-    ax.set_zticks([])
-    ax.zaxis.line.set_color((0, 0, 0, 0))
-    
-    tail_str = f'λ={tail_dep:.2f}' if not np.isnan(tail_dep) else ''
-    fig.suptitle(f'{pair[0]} vs {pair[1]}  ·  {date_str}  ·  ρ={corr:.2f}  {tail_str}',
-                fontsize=13, color='#f0f2f6', fontweight='600', y=0.95)
-    
-    plt.tight_layout()
-    return fig
-
-
-def create_grid_frame(
-    returns: pd.DataFrame,
-    pairs: list,
-    window_end: int,
-    window_size: int,
-    date_str: str,
-    azimuth: float = -60
-) -> Figure:
-    """Create a grid of 3D plots for GIF frames."""
-    
-    n_pairs = len(pairs)
-    ncols, nrows = (n_pairs, 1) if n_pairs <= 3 else (3, 2)
-    figsize = (6 * ncols, 6) if n_pairs <= 3 else (16, 11)
-    
-    fig = plt.figure(figsize=figsize, facecolor='#0f1117')
-    
-    window_start = max(0, window_end - window_size)
-    window_data = returns.iloc[window_start:window_end]
-    
-    colors_3d = [
-        (0.06, 0.07, 0.09, 0.0), (0.08, 0.12, 0.20, 0.3),
-        (0.12, 0.23, 0.37, 0.6), (0.18, 0.38, 0.53, 0.8),
-        (0.29, 0.62, 0.73, 0.9), (0.49, 0.80, 0.91, 0.95),
-        (0.72, 0.88, 0.94, 0.98), (0.91, 0.84, 0.64, 1.0),
-        (0.79, 0.66, 0.38, 1.0),
+    # Spectacular colorscale
+    colorscale = [
+        [0.0, 'rgba(15, 17, 23, 0.0)'],
+        [0.05, 'rgba(20, 30, 50, 0.3)'],
+        [0.15, 'rgba(30, 58, 95, 0.6)'],
+        [0.3, 'rgba(45, 97, 135, 0.8)'],
+        [0.45, 'rgba(74, 158, 187, 0.9)'],
+        [0.6, 'rgba(126, 204, 232, 0.95)'],
+        [0.75, 'rgba(184, 224, 240, 0.98)'],
+        [0.88, 'rgba(232, 213, 163, 1.0)'],
+        [1.0, 'rgba(201, 169, 98, 1.0)'],
     ]
-    cmap_3d = LinearSegmentedColormap.from_list('spectacular', colors_3d)
     
-    for idx, pair in enumerate(pairs):
-        ax = fig.add_subplot(nrows, ncols, idx + 1, projection='3d', facecolor='#0f1117')
+    frames = []
+    sliders_steps = []
+    
+    # Get global axis ranges
+    all_x = returns[pair[0]].values * 100
+    all_y = returns[pair[1]].values * 100
+    xmin_global, xmax_global = np.percentile(all_x, [1, 99])
+    ymin_global, ymax_global = np.percentile(all_y, [1, 99])
+    xmin_global -= (xmax_global - xmin_global) * 0.3
+    xmax_global += (xmax_global - xmin_global) * 0.3
+    ymin_global -= (ymax_global - ymin_global) * 0.3
+    ymax_global += (ymax_global - ymin_global) * 0.3
+    
+    grid_size = 60
+    xx, yy = np.mgrid[xmin_global:xmax_global:complex(grid_size), 
+                      ymin_global:ymax_global:complex(grid_size)]
+    
+    progress_bar = st.progress(0, text="Building animation frames...")
+    
+    for i, window_end in enumerate(frame_indices):
+        window_start = max(0, window_end - window_size)
+        window_data = returns.iloc[window_start:window_end]
         
         x = window_data[pair[0]].values * 100
         y = window_data[pair[1]].values * 100
         corr = np.corrcoef(x, y)[0, 1]
         tail_dep = compute_tail_dependence(x / 100, y / 100, u=0.05)
+        date_str = dates[window_end].strftime('%Y-%m-%d')
         
         try:
-            xmin, xmax = np.percentile(x, [2, 98])
-            ymin, ymax = np.percentile(y, [2, 98])
-            xmin -= (xmax - xmin) * 0.3
-            xmax += (xmax - xmin) * 0.3
-            ymin -= (ymax - ymin) * 0.3
-            ymax += (ymax - ymin) * 0.3
-            
-            grid_res = 80
-            xx, yy = np.mgrid[xmin:xmax:complex(grid_res), ymin:ymax:complex(grid_res)]
             positions = np.vstack([xx.ravel(), yy.ravel()])
-            
             kernel = stats.gaussian_kde(np.vstack([x, y]))
             density = np.reshape(kernel(positions).T, xx.shape)
             density = gaussian_filter(density, sigma=1.0)
-            density_norm = (density - density.min()) / (density.max() - density.min())
-            
-            ax.plot_surface(xx, yy, density_norm, cmap=cmap_3d, edgecolor='none',
-                           alpha=0.97, antialiased=True, rstride=2, cstride=2, shade=True)
-            
-            try:
-                interp = RegularGridInterpolator(
-                    (np.linspace(xmin, xmax, grid_res), np.linspace(ymin, ymax, grid_res)),
-                    density_norm, method='linear', bounds_error=False, fill_value=0
-                )
-                z_scatter = np.clip(interp(np.column_stack([x, y])), 0, None) + 0.02
-            except:
-                z_scatter = np.full_like(x, 0.05)
-            
-            ax.scatter(x, y, z_scatter, c='#c9a962', s=8, alpha=0.8,
-                      edgecolors='white', linewidths=0.2, zorder=10)
+            density_norm = (density - density.min()) / (density.max() - density.min() + 1e-10)
         except:
-            ax.scatter(x, y, np.zeros_like(x), c='#c9a962', s=10, alpha=0.6)
-        
-        ax.set_xlabel(f'{pair[0]} (%)', fontsize=9, color='#9ca3af', labelpad=8)
-        ax.set_ylabel(f'{pair[1]} (%)', fontsize=9, color='#9ca3af', labelpad=8)
-        ax.view_init(elev=25, azim=azimuth)
-        
-        ax.xaxis.set_pane_color((0, 0, 0, 0))
-        ax.yaxis.set_pane_color((0, 0, 0, 0))
-        ax.zaxis.set_pane_color((0, 0, 0, 0))
-        ax.xaxis._axinfo['grid']['color'] = (0.3, 0.35, 0.4, 0.12)
-        ax.yaxis._axinfo['grid']['color'] = (0.3, 0.35, 0.4, 0.12)
-        ax.zaxis._axinfo['grid']['color'] = (0, 0, 0, 0)
-        ax.tick_params(axis='x', colors='#6b7280', labelsize=7)
-        ax.tick_params(axis='y', colors='#6b7280', labelsize=7)
-        ax.set_zticks([])
-        ax.zaxis.line.set_color((0, 0, 0, 0))
+            density_norm = np.zeros_like(xx)
         
         tail_str = f'λ={tail_dep:.2f}' if not np.isnan(tail_dep) else ''
-        ax.set_title(f'{pair[0]} vs {pair[1]}  ·  ρ={corr:.2f}  {tail_str}',
-                    fontsize=11, color='#f0f2f6', fontweight='500', pad=5)
-    
-    fig.suptitle(date_str, fontsize=15, color='#f0f2f6', fontweight='600', y=0.98)
-    plt.tight_layout(rect=[0, 0.02, 1, 0.94])
-    return fig
-
-
-def generate_gif(
-    returns: pd.DataFrame,
-    pairs: list,
-    window_size: int,
-    step_size: int,
-    fps: int = 5,
-    rotate: bool = False
-) -> bytes:
-    """Generate animated GIF."""
-    
-    frames = []
-    dates = returns.index
-    frame_indices = list(range(window_size, len(returns), step_size))
-    total_frames = len(frame_indices)
-    
-    progress_bar = st.progress(0, text="Generating animation...")
-    
-    for i, window_end in enumerate(frame_indices):
-        date_str = dates[window_end].strftime('%Y-%m-%d')
-        azimuth = -60 + (i / total_frames) * 45 if rotate else -60
         
-        if len(pairs) == 1:
-            fig = create_joint_density_frame(returns, pairs[0], window_end, window_size, date_str, azimuth=azimuth)
-        else:
-            fig = create_grid_frame(returns, pairs, window_end, window_size, date_str, azimuth=azimuth)
+        frame = go.Frame(
+            data=[go.Surface(
+                x=xx, y=yy, z=density_norm,
+                colorscale=colorscale,
+                showscale=False,
+                opacity=0.95,
+                lighting=dict(ambient=0.5, diffuse=0.7, specular=0.4),
+                contours=dict(z=dict(show=True, usecolormap=True, project_z=False))
+            )],
+            name=str(i),
+            layout=go.Layout(
+                title=dict(
+                    text=f'<b>{pair[0]} vs {pair[1]}</b>  ·  {date_str}  ·  ρ={corr:.2f}  {tail_str}',
+                    font=dict(size=14, color='#f0f2f6')
+                )
+            )
+        )
+        frames.append(frame)
         
-        buf = io.BytesIO()
-        fig.savefig(buf, format='png', dpi=120, facecolor='#0f1117', edgecolor='none', bbox_inches='tight')
-        buf.seek(0)
-        frames.append(imageio.imread(buf))
-        plt.close(fig)
+        sliders_steps.append(dict(
+            args=[[str(i)], dict(frame=dict(duration=100, redraw=True), mode='immediate')],
+            label=date_str,
+            method='animate'
+        ))
         
-        progress_bar.progress(min((i + 1) / total_frames, 1.0), text=f"Generating frame {i+1}/{total_frames}")
+        progress_bar.progress(min((i + 1) / len(frame_indices), 1.0), 
+                             text=f"Building frame {i+1}/{len(frame_indices)}")
     
     progress_bar.empty()
     
-    gif_buffer = io.BytesIO()
-    imageio.mimsave(gif_buffer, frames, format='GIF', fps=fps, loop=0)
-    gif_buffer.seek(0)
+    # Create initial figure with first frame data
+    window_data = returns.iloc[:window_size]
+    x = window_data[pair[0]].values * 100
+    y = window_data[pair[1]].values * 100
     
-    return gif_buffer.getvalue()
+    try:
+        positions = np.vstack([xx.ravel(), yy.ravel()])
+        kernel = stats.gaussian_kde(np.vstack([x, y]))
+        density = np.reshape(kernel(positions).T, xx.shape)
+        density = gaussian_filter(density, sigma=1.0)
+        density_norm = (density - density.min()) / (density.max() - density.min() + 1e-10)
+    except:
+        density_norm = np.zeros_like(xx)
+    
+    fig = go.Figure(
+        data=[go.Surface(
+            x=xx, y=yy, z=density_norm,
+            colorscale=colorscale,
+            showscale=False,
+            opacity=0.95,
+            lighting=dict(ambient=0.5, diffuse=0.7, specular=0.4),
+            contours=dict(z=dict(show=True, usecolormap=True, project_z=False))
+        )],
+        frames=frames
+    )
+    
+    # Add play/pause buttons and slider
+    fig.update_layout(
+        title=dict(
+            text=f'<b>{pair[0]} vs {pair[1]}</b>  ·  Animated Evolution',
+            x=0.5,
+            font=dict(size=16, color='#f0f2f6')
+        ),
+        scene=dict(
+            xaxis=dict(title=f'{pair[0]} (%)', title_font=dict(color='#9ca3af', size=11),
+                      tickfont=dict(color='#6b7280', size=9), gridcolor='rgba(75, 85, 99, 0.15)',
+                      showbackground=False, range=[xmin_global, xmax_global]),
+            yaxis=dict(title=f'{pair[1]} (%)', title_font=dict(color='#9ca3af', size=11),
+                      tickfont=dict(color='#6b7280', size=9), gridcolor='rgba(75, 85, 99, 0.15)',
+                      showbackground=False, range=[ymin_global, ymax_global]),
+            zaxis=dict(title='', showticklabels=False, showgrid=False, showbackground=False,
+                      range=[0, 1]),
+            camera=dict(eye=dict(x=1.5, y=1.5, z=0.8)),
+            aspectmode='manual',
+            aspectratio=dict(x=1, y=1, z=0.5),
+            bgcolor='rgba(0,0,0,0)'
+        ),
+        updatemenus=[
+            dict(
+                type='buttons',
+                showactive=False,
+                y=0,
+                x=0.1,
+                xanchor='right',
+                yanchor='top',
+                buttons=[
+                    dict(label='▶ Play',
+                         method='animate',
+                         args=[None, dict(frame=dict(duration=150, redraw=True),
+                                         fromcurrent=True,
+                                         transition=dict(duration=0))]),
+                    dict(label='⏸ Pause',
+                         method='animate',
+                         args=[[None], dict(frame=dict(duration=0, redraw=False),
+                                           mode='immediate',
+                                           transition=dict(duration=0))])
+                ],
+                font=dict(color='#0f1117'),
+                bgcolor='#c9a962'
+            )
+        ],
+        sliders=[dict(
+            active=0,
+            yanchor='top',
+            xanchor='left',
+            currentvalue=dict(
+                font=dict(size=12, color='#9ca3af'),
+                prefix='Date: ',
+                visible=True,
+                xanchor='center'
+            ),
+            transition=dict(duration=100),
+            pad=dict(b=10, t=50),
+            len=0.8,
+            x=0.1,
+            y=0,
+            steps=sliders_steps,
+            font=dict(color='#6b7280'),
+            tickcolor='#6b7280',
+            bgcolor='#1a1d26',
+            activebgcolor='#c9a962',
+            bordercolor='#2a2f3a'
+        )],
+        paper_bgcolor='#0f1117',
+        plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(l=0, r=0, t=60, b=100),
+        height=550
+    )
+    
+    return fig
 
 
 # ============================================================================
@@ -1112,9 +1076,8 @@ with st.sidebar:
     
     st.markdown('<div class="sidebar-header">Animation Settings</div>', unsafe_allow_html=True)
     
-    step_size = st.slider("Step size (days per frame)", min_value=1, max_value=20, value=5)
-    fps = st.slider("Frames per second", min_value=2, max_value=15, value=5)
-    rotate_camera = st.checkbox("Rotate camera", value=False)
+    step_size = st.slider("Step size (days per frame)", min_value=1, max_value=20, value=5,
+                         help="Higher = faster animation, fewer frames")
     
     st.markdown("---")
     st.markdown("""
@@ -1235,30 +1198,33 @@ with col2:
 
 # Animation section
 st.markdown("---")
-st.markdown("### Generate Animation")
+st.markdown("### Animated Evolution")
+st.markdown("<p style='color: #6b7280; font-size: 0.85rem; margin-top: -10px;'>Watch how the joint distribution evolves over time</p>", unsafe_allow_html=True)
 
-col1, col2, col3 = st.columns([1, 1, 2])
-
-with col1:
-    generate_btn = st.button("🎬 Generate Animation", use_container_width=True)
-
-if 'gif_data' not in st.session_state:
-    st.session_state.gif_data = None
-
-if generate_btn:
-    with st.spinner("Creating animation... This may take a minute."):
-        st.session_state.gif_data = generate_gif(returns, pairs, window_size, step_size, fps, rotate_camera)
-    st.success("Animation ready!")
-
-if st.session_state.gif_data is not None:
-    st.markdown("### Preview")
-    st.image(st.session_state.gif_data, use_container_width=True)
+if len(pairs) == 1:
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        generate_btn = st.button("🎬 Generate Animation", use_container_width=True)
+        st.markdown("""
+        <div class="info-box" style="margin-top: 1rem;">
+            <b>Tip:</b> Click Play to watch the distribution morph through time. Use the slider to jump to specific dates.
+        </div>
+        """, unsafe_allow_html=True)
     
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f"joint_dist_{'_'.join(tickers)}_{timestamp}.gif"
+    if 'animation_fig' not in st.session_state:
+        st.session_state.animation_fig = None
     
-    st.download_button(label="📥 Download GIF", data=st.session_state.gif_data,
-                      file_name=filename, mime="image/gif", use_container_width=True)
+    if generate_btn:
+        st.session_state.animation_fig = generate_plotly_animation(
+            returns, pairs[0], window_size, step_size
+        )
+    
+    if st.session_state.animation_fig is not None:
+        with col2:
+            st.plotly_chart(st.session_state.animation_fig, use_container_width=True, 
+                           config={'displayModeBar': False})
+else:
+    st.info("Animation is available for single pair analysis. Select 2 assets to enable animated view.")
 
 # Footer
 st.markdown("---")
