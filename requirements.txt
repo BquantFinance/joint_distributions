@@ -1,0 +1,6 @@
+streamlit
+seaborn
+plotly
+yfinance
+imageio
+scipy
